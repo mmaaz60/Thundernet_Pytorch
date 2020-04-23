@@ -9,13 +9,12 @@ from torch.autograd import Variable
 
 from .anchor_target_layer import _AnchorTargetLayer
 from .proposal_layer import _ProposalLayer
-from model.loss.losses import  hard_negative_mining
-
-
+from model.loss.losses import hard_negative_mining
 
 
 class _RPN(nn.Module):
     """ region proposal network """
+
     def __init__(self, din):
         super(_RPN, self).__init__()
 
@@ -50,8 +49,6 @@ class _RPN(nn.Module):
 
         self.rpn_loss_cls = 0
         self.rpn_loss_box = 0
-
-
 
     @staticmethod
     def reshape(x, d):
@@ -111,28 +108,22 @@ class _RPN(nn.Module):
             # print(Counter(label))
 
             loss = -F.log_softmax(rpn_cls_score, dim=1)[:, 0]
-            mask ,num_pos = hard_negative_mining(loss, rpn_label)
+            mask, num_pos = hard_negative_mining(loss, rpn_label)
             confidence = rpn_cls_score[mask, :]
             self.rpn_loss_cls = F.cross_entropy(confidence.reshape(-1, 2), rpn_label[mask], reduction='mean')
 
             # self.rpn_loss_cls = F.cross_entropy(rpn_cls_score, rpn_label)
             # self.rpn_loss_cls = OHEM_loss(rpn_cls_score, rpn_label)
 
-
-
-
             fg_cnt = torch.sum(rpn_label.data.ne(0))
 
             rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = rpn_data[
-                1:]
+                                                                                  1:]
 
             # compute bbox regression loss
             rpn_bbox_inside_weights = Variable(rpn_bbox_inside_weights)
             rpn_bbox_outside_weights = Variable(rpn_bbox_outside_weights)
             rpn_bbox_targets = Variable(rpn_bbox_targets)
-
-
-
 
             self.rpn_loss_box = _smooth_l1_loss(rpn_bbox_pred,
                                                 rpn_bbox_targets,
@@ -140,8 +131,6 @@ class _RPN(nn.Module):
                                                 rpn_bbox_outside_weights,
                                                 sigma=3,
                                                 dim=[1, 2, 3],
-                                           )
-
-
+                                                )
 
         return rois, self.rpn_loss_cls, self.rpn_loss_box

@@ -3,6 +3,7 @@ from .modules import *
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
 from model.utils.config import cfg
 
+
 class SnetExtractor(nn.Module):
     cfg = {
         49: [24, 60, 120, 240, 512],
@@ -10,9 +11,9 @@ class SnetExtractor(nn.Module):
         535: [48, 248, 496, 992],
     }
 
-    def __init__(self,  version = 146 ,model_path=None ,  **kwargs):
+    def __init__(self, version=146, model_path=None, **kwargs):
 
-        super(SnetExtractor,self).__init__()
+        super(SnetExtractor, self).__init__()
         num_layers = [4, 8, 4]
         self.model_path = model_path
 
@@ -20,15 +21,12 @@ class SnetExtractor(nn.Module):
         channels = self.cfg[version]
         self.channels = channels
 
-
-
         self.conv1 = conv_bn(
-            3, channels[0], kernel_size=3, stride=2,pad = 1
+            3, channels[0], kernel_size=3, stride=2, pad=1
         )
         self.maxpool = nn.MaxPool2d(
             kernel_size=3, stride=2, padding=1,
         )
-
 
         self.stage1 = self._make_layer(
             num_layers[0], channels[0], channels[1], **kwargs)
@@ -38,14 +36,12 @@ class SnetExtractor(nn.Module):
             num_layers[2], channels[2], channels[3], **kwargs)
         if len(self.channels) == 5:
             self.conv5 = conv_bn(
-                channels[3], channels[4], kernel_size=1, stride=1 ,pad=0 )
-
-
+                channels[3], channels[4], kernel_size=1, stride=1, pad=0)
 
         if len(channels) == 5:
-            self.cem = CEM(channels[-3], channels[-1], channels[-1] ,cfg.FEAT_STRIDE)
+            self.cem = CEM(channels[-3], channels[-1], channels[-1], cfg.FEAT_STRIDE)
         else:
-            self.cem = CEM(channels[-2], channels[-1], channels[-1],cfg.FEAT_STRIDE)
+            self.cem = CEM(channels[-2], channels[-1], channels[-1], cfg.FEAT_STRIDE)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self._initialize_weights()
 
@@ -53,15 +49,13 @@ class SnetExtractor(nn.Module):
         layers = []
         for i in range(num_layers):
             if i == 0:
-                layers.append(ShuffleV2Block(in_channels, out_channels, mid_channels=out_channels // 2, ksize=5, stride=2))
+                layers.append(
+                    ShuffleV2Block(in_channels, out_channels, mid_channels=out_channels // 2, ksize=5, stride=2))
             else:
                 layers.append(ShuffleV2Block(in_channels // 2, out_channels,
-                                                    mid_channels=out_channels // 2, ksize=5, stride=1))
+                                             mid_channels=out_channels // 2, ksize=5, stride=1))
             in_channels = out_channels
         return nn.Sequential(*layers)
-
-
-
 
     def _initialize_weights(self):
 
@@ -70,7 +64,7 @@ class SnetExtractor(nn.Module):
             if classname.find('BatchNorm') != -1:
                 for p in m.parameters(): p.requires_grad = False
 
-        if  self.model_path is not None:
+        if self.model_path is not None:
 
             print("Loading pretrained weights from %s" % (self.model_path))
             if torch.cuda.is_available():
@@ -84,7 +78,7 @@ class SnetExtractor(nn.Module):
             for k in keys:
                 state_dict[k.replace("module.", "")] = state_dict.pop(k)
 
-            self.load_state_dict(state_dict,strict = False)
+            self.load_state_dict(state_dict, strict=False)
 
             for para in self.conv1.parameters():
                 para.requires_grad = False
@@ -142,17 +136,18 @@ class SnetExtractor(nn.Module):
         if cfg.FEAT_STRIDE == 16:
             cem_out = self.cem([c4, c5, Cglb_lat])
         elif cfg.FEAT_STRIDE == 8:
-            cem_out = self.cem([c3,c4, c5, Cglb_lat])
+            cem_out = self.cem([c3, c4, c5, Cglb_lat])
 
         return cem_out
+
 
 class snet(_fasterRCNN):
     def __init__(self,
                  classes,
-                 layer ,
+                 layer,
                  pretrained_path=None,
                  class_agnostic=False,
-                ):
+                 ):
         self.pretrained_path = pretrained_path
 
         self.class_agnostic = class_agnostic
@@ -170,9 +165,6 @@ class snet(_fasterRCNN):
     def _init_modules(self):
         snet = SnetExtractor(self.layer, self.pretrained_path)
 
-
-
-
         # Build snet.
         self.RCNN_base = snet
 
@@ -183,12 +175,10 @@ class snet(_fasterRCNN):
         #         for p in self.RCNN_base[layer].parameters():
         #             p.requires_grad = False
 
-
         self.RCNN_top = nn.Sequential(nn.Linear(5 * 7 * 7, 1024),
-                                          nn.ReLU(inplace=True),
+                                      nn.ReLU(inplace=True),
 
-                                         )
-
+                                      )
 
         c_in = 1024
 
@@ -208,7 +198,6 @@ class snet(_fasterRCNN):
             self.RCNN_base.stage2.train()
             self.RCNN_base.stage3.train()
 
-
             def set_bn_eval(m):
                 classname = m.__class__.__name__
                 if classname.find('BatchNorm') != -1:
@@ -219,10 +208,8 @@ class snet(_fasterRCNN):
             set_bn_eval(self.RCNN_base.stage2)
             set_bn_eval(self.RCNN_base.stage3)
 
-
     def _head_to_tail(self, pool5):
         pool5_flat = pool5.view(pool5.size(0), -1)
         fc7 = self.RCNN_top(pool5_flat)  # or two large fully-connected layers
 
         return fc7
-

@@ -4,12 +4,11 @@ import torch
 import torch.nn.functional as F
 import functools
 
-
-
 CEM_FILTER = 245
 anchor_number = 25
 
-def conv_bn(inp, oup, kernel_size , stride , pad):
+
+def conv_bn(inp, oup, kernel_size, stride, pad):
     return nn.Sequential(
         nn.Conv2d(inp, oup, kernel_size, stride, pad, bias=False),
         nn.BatchNorm2d(oup),
@@ -17,30 +16,29 @@ def conv_bn(inp, oup, kernel_size , stride , pad):
     )
 
 
-
 class CEM(nn.Module):
     """Context Enhancement Module"""
 
-    def __init__(self, in_channels1, in_channels2 ,in_channels3 ,feat_stride, kernel_size=1, stride=1):
+    def __init__(self, in_channels1, in_channels2, in_channels3, feat_stride, kernel_size=1, stride=1):
         super(CEM, self).__init__()
         self.feat_stride = feat_stride
         downsample_size = CEM_FILTER
 
         if feat_stride == 8:
-            self.conv3 = nn.Conv2d(in_channels1 // 2 , downsample_size, kernel_size, bias=True)
+            self.conv3 = nn.Conv2d(in_channels1 // 2, downsample_size, kernel_size, bias=True)
 
         self.conv4 = nn.Conv2d(in_channels1, downsample_size, kernel_size, bias=True)
 
         self.conv5 = nn.Conv2d(in_channels2, downsample_size, kernel_size, bias=True)
 
-        self.convlast= nn.Conv2d(in_channels3, downsample_size, kernel_size, bias=True)
-
+        self.convlast = nn.Conv2d(in_channels3, downsample_size, kernel_size, bias=True)
 
         # self.conv7 = nn.Conv2d(downsample_size, CEM_FILTER, kernel_size = 3, stride = 1, padding= 2 , bias=True)
         # self.bn7 = nn.BatchNorm2d(CEM_FILTER)
         # self.relu7 = nn.ReLU(inplace=True)
         self._initialize_weights()
-    def forward(self,inputs):
+
+    def forward(self, inputs):
 
         if self.feat_stride == 8:
             C3_lat = self.conv3(inputs[0])
@@ -49,7 +47,7 @@ class CEM(nn.Module):
             C5_lat = self.conv5(inputs[2])
             C5_lat = F.interpolate(C5_lat, size=[C3_lat.size(2), C3_lat.size(3)], mode="nearest")
             C6_lat = self.convlast(inputs[3])
-            out =   C3_lat +  C4_lat + C5_lat + C6_lat
+            out = C3_lat + C4_lat + C5_lat + C6_lat
         else:
             C4_lat = self.conv4(inputs[0])
 
@@ -58,7 +56,6 @@ class CEM(nn.Module):
             C5_lat = F.interpolate(C5_lat, size=[C4_lat.size(2), C4_lat.size(3)], mode="nearest")
 
             C6_lat = self.convlast(inputs[2])
-
 
             out = C4_lat + C5_lat + C6_lat
 
@@ -160,7 +157,7 @@ class RPN(nn.Module):
         super(RPN, self).__init__()
         self.num_anchors = anchor_number
 
-        self.dw5_5 =  nn.Conv2d(in_channels, in_channels, kernel_size=5, stride=1, padding=2, groups=in_channels)
+        self.dw5_5 = nn.Conv2d(in_channels, in_channels, kernel_size=5, stride=1, padding=2, groups=in_channels)
         self.bn0 = nn.BatchNorm2d(in_channels)
         self.relu0 = nn.ReLU(inplace=True)
         self.con1x1 = nn.Conv2d(in_channels, f_channels, kernel_size=1)
@@ -168,7 +165,6 @@ class RPN(nn.Module):
         self.relu1 = nn.ReLU(inplace=True)
 
         self._initialize_weights()
-
 
     def forward(self, x):
 
@@ -207,12 +203,13 @@ class RPN(nn.Module):
 
 
 class SAM(torch.nn.Module):
-    def __init__(self,  f_channels ,CEM_FILTER ):
+    def __init__(self, f_channels, CEM_FILTER):
         super(SAM, self).__init__()
 
         self.conv1 = nn.Conv2d(f_channels, CEM_FILTER, kernel_size=1)
         self.bn = nn.BatchNorm2d(CEM_FILTER)
         self._initialize_weights()
+
     def forward(self, input):
 
         cem = input[0]
@@ -223,7 +220,6 @@ class SAM(torch.nn.Module):
         sam = F.sigmoid(sam)
         out = cem * sam
         return out
-
 
     def _initialize_weights(self):
         for name, m in self.named_modules():
@@ -294,10 +290,10 @@ class ShuffleV2Block(nn.Module):
             self.branch_proj = None
 
     def forward(self, old_x):
-        if self.stride==1:
+        if self.stride == 1:
             x_proj, x = self.channel_shuffle(old_x)
             return torch.cat((x_proj, self.branch_main(x)), 1)
-        elif self.stride==2:
+        elif self.stride == 2:
             x_proj = old_x
             x = old_x
             return torch.cat((self.branch_proj(x_proj), self.branch_main(x)), 1)

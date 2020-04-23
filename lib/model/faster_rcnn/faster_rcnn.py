@@ -8,11 +8,11 @@ from torch.autograd import Variable
 import torchvision.models as models
 from torchvision.ops import RoIAlign, RoIPool
 
-from psroialign.psroialign import PSROIAlignhandle,PSROIPoolhandle
+from psroialign.psroialign import PSROIAlignhandle, PSROIPoolhandle
 
 # from psroi_pooling.modules.psroi_pool import PSRoIPool
 
-from .modules import  RPN,SAM
+from .modules import RPN, SAM
 from model.utils.config import cfg
 # from model.rpn.rpn import _RPN
 from model.rpn.rpn import _RPN
@@ -20,14 +20,12 @@ from model.rpn.rpn import _RPN
 from model.rpn.proposal_target_layer_cascade import _ProposalTargetLayer
 from model.loss.losses import _smooth_l1_loss
 
-from model.loss.losses import  OHEM_loss,hard_negative_mining
-
-
-
+from model.loss.losses import OHEM_loss, hard_negative_mining
 
 
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
+
     def __init__(self,
                  classes,
                  class_agnostic,
@@ -37,7 +35,6 @@ class _fasterRCNN(nn.Module):
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
 
-
         # loss
         self.RCNN_loss_cls = 0
         self.RCNN_loss_bbox = 0
@@ -46,8 +43,7 @@ class _fasterRCNN(nn.Module):
 
         self.rpn = RPN(in_channels=245, f_channels=256)
 
-
-        self.sam = SAM(256,245)
+        self.sam = SAM(256, 245)
         # define rpn
         self.RCNN_rpn = _RPN(self.dout_base_model)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
@@ -56,10 +52,8 @@ class _fasterRCNN(nn.Module):
         self.pre_roi_time = None
         self.roi_pooling_time = None
         self.subnet_time = None
-        self.psroiAlign =  PSROIAlignhandle(1./cfg.FEAT_STRIDE, 7,2, 5)
-        self.psroiPool =  PSROIPoolhandle(7,7,1./cfg.FEAT_STRIDE,7,5)
-
-
+        self.psroiAlign = PSROIAlignhandle(1. / cfg.FEAT_STRIDE, 7, 2, 5)
+        self.psroiPool = PSROIPoolhandle(7, 7, 1. / cfg.FEAT_STRIDE, 7, 5)
 
     def _roi_pool_layer(self, bottom, rois):
         return self.psroiPool.forward(bottom, rois)
@@ -71,7 +65,6 @@ class _fasterRCNN(nn.Module):
                 # hm,reg_mask,wh,offset,ind
                 ):
         batch_size = im_data.size(0)
-
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
@@ -87,8 +80,7 @@ class _fasterRCNN(nn.Module):
         basefeat = self.RCNN_base(im_data)
 
         # feed base feature map tp RPN to obtain rois
-        rpn_feat= self.rpn(basefeat)
-
+        rpn_feat = self.rpn(basefeat)
 
         # rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(rpn_feat, im_info, gt_boxes, num_boxes,hm,reg_mask,wh,offset,ind)
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(rpn_feat, im_info, gt_boxes, num_boxes)
@@ -117,9 +109,7 @@ class _fasterRCNN(nn.Module):
         pre_roi_time = time.time()
         self.pre_roi_time = pre_roi_time - rpn_time
 
-        base_feat = self.sam([basefeat,rpn_feat])
-
-
+        base_feat = self.sam([basefeat, rpn_feat])
 
         # do roi pooling based on predicted rois
         if cfg.POOLING_MODE == 'align':
@@ -146,14 +136,12 @@ class _fasterRCNN(nn.Module):
 
             bbox_pred = bbox_pred_select.squeeze(1)
 
-
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
-
 
         if self.training:
             # classification loss
@@ -166,7 +154,6 @@ class _fasterRCNN(nn.Module):
             mask, num_pos = hard_negative_mining(loss, rois_label)
             confidence = cls_score[mask, :]
             RCNN_loss_cls = F.cross_entropy(confidence, rois_label[mask], reduction='mean')
-
 
             # bounding box regression L1 loss
 
@@ -204,7 +191,6 @@ class _fasterRCNN(nn.Module):
         # normal_init(self.RCNN_rpn.RPN_hm_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_rpn.PRN_wh_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_rpn.PRN_offset_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-
 
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)

@@ -1,4 +1,3 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -13,14 +12,14 @@ import pprint
 import pdb
 import time
 import torch
-from torch.utils.data import  RandomSampler
+from torch.utils.data import RandomSampler
 from torch.autograd import Variable
 import torch.nn as nn
 from torch.utils.data.sampler import Sampler
 import random
 from roi_data_layer.roidb import combined_roidb
 
-from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir,_merge_a_into_b
+from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir, _merge_a_into_b
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
     adjust_learning_rate, save_checkpoint, clip_gradient
 
@@ -28,10 +27,8 @@ from model.faster_rcnn.Snet import snet
 from test_net import eval_result
 # from model.faster_rcnn.resnet import resnet
 
-from roi_data_layer.roibatchLoader  import Detection
+from roi_data_layer.roibatchLoader import Detection
 from roi_data_layer.augmentation import SSDAugmentation
-
-
 
 
 def parse_args():
@@ -167,8 +164,6 @@ def parse_args():
                         default=False,
                         type=bool)
 
-
-
     # set eval_interval
 
     parser.add_argument('--eval_interval',
@@ -179,8 +174,6 @@ def parse_args():
 
     args = parser.parse_args()
     return args
-
-
 
 
 class BatchSampler(Sampler):
@@ -199,8 +192,8 @@ class BatchSampler(Sampler):
         [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     """
 
-    def __init__(self, sampler, batch_size, drop_last = False,size = 320):
-        self.size  = size
+    def __init__(self, sampler, batch_size, drop_last=False, size=320):
+        self.size = size
         if not isinstance(sampler, Sampler):
             raise ValueError("sampler should be an instance of "
                              "torch.utils.data.Sampler, but got sampler={}"
@@ -215,19 +208,18 @@ class BatchSampler(Sampler):
         self.sampler = sampler
         self.batch_size = batch_size
         self.drop_last = drop_last
-        self.count_change_size   = 0
-
+        self.count_change_size = 0
 
     def __iter__(self):
         batch = []
 
         for idx in self.sampler:
-            batch.append([idx,self.size])
+            batch.append([idx, self.size])
             if len(batch) == self.batch_size:
                 self.count_change_size += 1
                 yield batch
                 batch = []
-                if self.count_change_size  % 10 == 0:
+                if self.count_change_size % 10 == 0:
                     self.size = random.choice(cfg.TRAIN.SIZE)
                     # print("change train size to ({},{})".format(self.size,self.size))
         self.count_change_size = 0
@@ -248,9 +240,6 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-
-
-
     if args.dataset == "pascal_voc_0712":
         args.imdb_name = "voc_2007_trainval+voc_2012_trainval"
         args.imdbval_name = "voc_2007_test"
@@ -269,7 +258,6 @@ if __name__ == '__main__':
             'ANCHOR_SCALES', '[2, 4 , 8, 16, 32]', 'ANCHOR_RATIOS', '[1.0/2 , 3.0/4 , 1 , 4.0/3 , 2 ]',
             'MAX_NUM_GT_BOXES', '50'
         ]
-
 
     args.cfg_file = "cfgs/{}_ls.yml".format(
         args.net) if args.large_scale else "cfgs/{}.yml".format(args.net.split("_")[0])
@@ -303,27 +291,22 @@ if __name__ == '__main__':
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-
-
     # dataset = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
     #                          imdb.num_classes, training=True)
 
     # dataset = roibatchLoader(roidb , imdb.num_classes, training=True)
 
-    dataset = Detection(roidb,num_classes= imdb.num_classes,
-                            transform=SSDAugmentation(cfg.TRAIN.SIZE,
-                                                      cfg.PIXEL_MEANS))
+    dataset = Detection(roidb, num_classes=imdb.num_classes,
+                        transform=SSDAugmentation(cfg.TRAIN.SIZE,
+                                                  cfg.PIXEL_MEANS))
     sampler_batch = BatchSampler(RandomSampler(dataset), args.batch_size)
-
 
     dataloader = torch.utils.data.DataLoader(dataset,
                                              # batch_size=args.batch_size,
-                                             batch_sampler=sampler_batch ,
+                                             batch_sampler=sampler_batch,
                                              # shuffle=True,
                                              num_workers=args.num_workers,
-                                                )
-
-
+                                             )
 
     # initilize the tensor holder here.
     im_data = torch.FloatTensor(1)
@@ -338,28 +321,20 @@ if __name__ == '__main__':
         num_boxes = num_boxes.cuda()
         gt_boxes = gt_boxes.cuda()
 
-
     # make variable
     im_data = Variable(im_data)
     im_info = Variable(im_info)
     num_boxes = Variable(num_boxes)
     gt_boxes = Variable(gt_boxes)
 
-
-
-
-
     if args.cuda:
         cfg.CUDA = True
-
-
 
     # initilize the network here.
 
     layer = int(args.net.split("_")[1])
     print(imdb.classes)
-    _RCNN = snet(imdb.classes,layer , pretrained_path =args.pre, class_agnostic=args.class_agnostic,)
-
+    _RCNN = snet(imdb.classes, layer, pretrained_path=args.pre, class_agnostic=args.class_agnostic, )
 
     _RCNN.create_architecture()
 
@@ -391,14 +366,14 @@ if __name__ == '__main__':
     lr = args.lr
     if args.resume:
         load_name = os.path.join(
-                output_dir,
-                'thundernet_epoch_{}.pth'.format( args.checkepoch,
-                                                  ))
+            output_dir,
+            'thundernet_epoch_{}.pth'.format(args.checkepoch,
+                                             ))
         print("loading checkpoint %s" % (load_name))
         checkpoint = torch.load(load_name)
 
         args.start_epoch = checkpoint['epoch']
-        _RCNN.load_state_dict(checkpoint['model'],strict=False)
+        _RCNN.load_state_dict(checkpoint['model'], strict=False)
         # optimizer.load_state_dict(checkpoint['optimizer'])
 
         # lr = optimizer.param_groups[0]['lr']
@@ -419,26 +394,23 @@ if __name__ == '__main__':
 
     if args.use_tfboard:
         from tensorboardX import SummaryWriter
+
         # from torch.utils.tensorboard import SummaryWriter
         logger = SummaryWriter(args.logdir)
 
-    warm  = True
+    warm = True
     for epoch in range(args.start_epoch, args.max_epochs + 1):
         # setting to train mode
         _RCNN.train()
         loss_temp = 0
         start = time.time()
 
-        if epoch in list(map(int,args.lr_decay_step.split(",") )):
+        if epoch in list(map(int, args.lr_decay_step.split(","))):
             adjust_learning_rate(optimizer, args.lr_decay_gamma)
             lr *= args.lr_decay_gamma
 
-
-        if epoch % args.eval_interval == 0  and epoch>0:
-            eval_result(args, logger, epoch-1,output_dir)
-
-
-
+        if epoch % args.eval_interval == 0 and epoch > 0:
+            eval_result(args, logger, epoch - 1, output_dir)
 
         data_iter = iter(dataloader)
 
@@ -451,13 +423,13 @@ if __name__ == '__main__':
             # if step%5==0:
             #     scale = random.choice([320,480,640])
             #     GlobalVar.set_sacle(scale)
-                # print(data_iter.dataset.scale)
+            # print(data_iter.dataset.scale)
 
             if step % 100 == 0 and step > 0 and epoch == 0 and warm:
-                adjust_learning_rate(optimizer,10)
+                adjust_learning_rate(optimizer, 10)
                 lr *= 10
 
-                if lr  >= args.lr - 0.00001:
+                if lr >= args.lr - 0.00001:
                     warm = False
 
             data = next(data_iter)
@@ -468,8 +440,6 @@ if __name__ == '__main__':
                 im_info.resize_(data[1].size()).copy_(data[1])
                 gt_boxes.resize_(data[2].size()).copy_(data[2])
                 num_boxes.resize_(data[3].size()).copy_(data[3])
-
-
 
             _RCNN.zero_grad()
             time_measure, \
@@ -487,7 +457,7 @@ if __name__ == '__main__':
             # backward
             optimizer.zero_grad()
             loss.backward()
-            #if args.net == "vgg16":
+            # if args.net == "vgg16":
             #    clip_gradient(_RCNN, 10.)
             optimizer.step()
 
@@ -511,8 +481,10 @@ if __name__ == '__main__':
                     fg_cnt = torch.sum(rois_label.data.ne(0))
                     bg_cnt = rois_label.data.numel() - fg_cnt
 
-                print("[epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e, rpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f size:(%3d,%3d)" \
-                    % (epoch, step, iters_per_epoch, loss_temp, lr, loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box,sampler_batch.size,sampler_batch.size))
+                print(
+                    "[epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e, rpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f size:(%3d,%3d)" \
+                    % (epoch, step, iters_per_epoch, loss_temp, lr, loss_rpn_cls, loss_rpn_box, loss_rcnn_cls,
+                       loss_rcnn_box, sampler_batch.size, sampler_batch.size))
                 # scale = random.choice([256, 320, 480])
                 # cfg.TRAIN.SCALES = [scale]
                 # print("change SCALE:{}".format(scale))
@@ -545,9 +517,9 @@ if __name__ == '__main__':
         if args.mGPUs:
 
             save_name = os.path.join(
-                    output_dir,
-                    'thundernet_epoch_{}.pth'.format( epoch,
-                                                  ))
+                output_dir,
+                'thundernet_epoch_{}.pth'.format(epoch,
+                                                 ))
             save_checkpoint(
                 {
                     'epoch': epoch + 1,
@@ -559,8 +531,8 @@ if __name__ == '__main__':
         else:
 
             save_name = os.path.join(
-                    output_dir,
-                    'thundernet_epoch_{}.pth'.format(epoch,
+                output_dir,
+                'thundernet_epoch_{}.pth'.format(epoch,
                                                  ))
             save_checkpoint(
                 {

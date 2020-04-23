@@ -34,6 +34,7 @@ try:
 except NameError:
     xrange = range  # Python 3
 
+
 # <<<< obsolete
 
 
@@ -310,8 +311,8 @@ class pascal_voc(imdb):
                         f.write(
                             '{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(
                                 index, dets[k, -1], dets[k, 0] + 1,
-                                dets[k, 1] + 1, dets[k, 2] + 1,
-                                dets[k, 3] + 1))
+                                                    dets[k, 1] + 1, dets[k, 2] + 1,
+                                                    dets[k, 3] + 1))
 
     def _do_python_eval(self, output_dir='output'):
         annopath = os.path.join(self._devkit_path, 'VOC' + self._year,
@@ -372,7 +373,6 @@ class pascal_voc(imdb):
                     self._image_set, output_dir)
         print('Running:\n{}'.format(cmd))
         status = subprocess.call(cmd, shell=True)
-
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_voc_results_file(all_boxes)

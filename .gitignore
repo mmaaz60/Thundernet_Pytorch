@@ -1,0 +1,6 @@
+*.so
+.idea/
+__pycache__
+lib/build/temp.linux-x86_64-3.7/
+lib/psroialign/PSROIAlign/build/temp.linux-x86_64-3.7/
+snet146_2/

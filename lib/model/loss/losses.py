@@ -1,12 +1,13 @@
 import torch
 from torch.nn import functional as F
 import pdb
-import  math
-from torch import  nn
+import math
+from torch import nn
+
 
 def _gather_feat(feat, ind, mask=None):
-    dim  = feat.size(2)
-    ind  = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
+    dim = feat.size(2)
+    ind = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
 
     feat = feat.gather(1, ind)
 
@@ -16,6 +17,7 @@ def _gather_feat(feat, ind, mask=None):
         feat = feat.view(-1, dim)
     return feat
 
+
 def _tranpose_and_gather_feat(feat, ind):
     feat = feat.permute(0, 2, 3, 1).contiguous()
     feat = feat.view(feat.size(0), -1, feat.size(3))
@@ -23,15 +25,15 @@ def _tranpose_and_gather_feat(feat, ind):
     feat = _gather_feat(feat, ind)
     return feat
 
+
 def _smooth_l1_loss(bbox_pred,
                     bbox_targets,
                     bbox_inside_weights,
                     bbox_outside_weights,
                     sigma=1.0,
                     dim=[1],
-                    reduce = "mean"):
-
-    sigma_2 = sigma**2
+                    reduce="mean"):
+    sigma_2 = sigma ** 2
     box_diff = bbox_pred - bbox_targets
     in_box_diff = bbox_inside_weights * box_diff
     abs_in_box_diff = torch.abs(in_box_diff)
@@ -42,7 +44,6 @@ def _smooth_l1_loss(bbox_pred,
     loss_box = out_loss_box
     # print("faster rcnn:")
     # print(loss_box.shape)
-
 
     for i in sorted(dim, reverse=True):
         loss_box = loss_box.sum(i)
@@ -56,11 +57,10 @@ def _smooth_l1_loss(bbox_pred,
 
 def OHEM_loss(roi_scores,
               gt_roi_labels,
-              n_ohem_sample= 256 ):
+              n_ohem_sample=256):
     n_sample = roi_scores.shape[0]
 
     roi_cls_loss = F.cross_entropy(roi_scores, gt_roi_labels, reduce=False)
-
 
     n_ohem_sample = min(n_ohem_sample, n_sample)
 
@@ -73,6 +73,7 @@ def OHEM_loss(roi_scores,
     roi_cls_loss = torch.sum(roi_cls_loss[indices]) / n_ohem_sample
 
     return roi_cls_loss
+
 
 def hard_negative_mining(loss, labels, neg_pos_ratio=3):
     """
@@ -88,7 +89,6 @@ def hard_negative_mining(loss, labels, neg_pos_ratio=3):
         neg_pos_ratio:  the ratio between the negative examples and positive examples.
     """
 
-
     pos_mask = labels > 0
 
     num_pos = pos_mask.long().sum(dim=0, keepdim=True)
@@ -96,10 +96,10 @@ def hard_negative_mining(loss, labels, neg_pos_ratio=3):
     num_neg = num_pos * neg_pos_ratio
 
     loss[pos_mask] = -math.inf
-    _, indexes = loss.sort( descending=True)
+    _, indexes = loss.sort(descending=True)
     _, orders = indexes.sort()
     neg_mask = orders < num_neg
-    return pos_mask | neg_mask , num_pos.cpu().numpy()[0]
+    return pos_mask | neg_mask, num_pos.cpu().numpy()[0]
 
 
 def _slow_neg_loss(pred, gt):
@@ -135,7 +135,6 @@ def _neg_loss(pred, gt):
         gt_regr (batch x c x h x w)
     '''
 
-
     pos_inds = gt.eq(1).float()
 
     neg_inds = gt.lt(1).float()
@@ -146,8 +145,6 @@ def _neg_loss(pred, gt):
 
     pos_loss = torch.log(pred) * torch.pow(1 - pred, 2) * pos_inds
     neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * neg_weights * neg_inds
-
-
 
     num_pos = pos_inds.float().sum()
     pos_loss = pos_loss.sum()
@@ -243,11 +240,9 @@ class RegL1Loss(nn.Module):
         super(RegL1Loss, self).__init__()
 
     def forward(self, output, mask, ind, target):
-
         pred = _tranpose_and_gather_feat(output, ind)
 
         mask = mask.unsqueeze(2).expand_as(pred).float()
-
 
         # loss = F.l1_loss(pred * mask, target * mask, reduction='elementwise_mean')
         loss = F.l1_loss(pred * mask, target * mask, size_average=False)

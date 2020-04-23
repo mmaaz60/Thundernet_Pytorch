@@ -14,18 +14,18 @@ __sets = {}
 from datasets.pascal_voc import pascal_voc
 from datasets.coco import coco
 
-
 for year in ['2007', '2012']:
-  for split in ['train', 'val', 'trainval', 'test']:
-    name = 'voc_{}_{}'.format(year, split)
-    __sets[name] = (lambda split=split, year=year: pascal_voc(split, year))
+    for split in ['train', 'val', 'trainval', 'test']:
+        name = 'voc_{}_{}'.format(year, split)
+        __sets[name] = (lambda split=split, year=year: pascal_voc(split, year))
 
 # Set up coco_2017_<split>
 
 for year in ['2017']:
-  for split in ['train', 'val']:
-    name = 'coco_{}_{}'.format(year, split)
-    __sets[name] = (lambda split=split, year=year: coco(split, year))
+    for split in ['train', 'val']:
+        name = 'coco_{}_{}'.format(year, split)
+        __sets[name] = (lambda split=split, year=year: coco(split, year))
+
 
 # Set up vg_<split>
 # for version in ['1600-400-20']:
@@ -46,12 +46,12 @@ for year in ['2017']:
 #     __sets[name] = (lambda split=split, devkit_path=devkit_path, data_path=data_path: imagenet(split,devkit_path,data_path))
 
 def get_imdb(name):
-  """Get an imdb (image database) by name."""
-  # if name not in __sets:
-  #   raise KeyError('Unknown dataset: {}'.format(name))
-  return __sets[name]()
+    """Get an imdb (image database) by name."""
+    # if name not in __sets:
+    #   raise KeyError('Unknown dataset: {}'.format(name))
+    return __sets[name]()
 
 
 def list_imdbs():
-  """List all registered imdbs."""
-  return list(__sets.keys())
+    """List all registered imdbs."""
+    return list(__sets.keys())

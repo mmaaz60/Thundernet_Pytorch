@@ -33,7 +33,7 @@ from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 
 from model.faster_rcnn.Snet import snet
-from utils import  color_list
+from utils import color_list
 import pdb
 
 try:
@@ -116,8 +116,6 @@ def parse_args():
                         default=-1,
                         type=int)
 
-
-
     args = parser.parse_args()
     return args
 
@@ -141,7 +139,6 @@ def _get_image_blob(im):
 
     im_shape = im_orig.shape
 
-
     processed_ims = []
     im_scale_factors = []
 
@@ -151,8 +148,8 @@ def _get_image_blob(im):
     # Prevent the biggest axis from being more than MAX_SIZE
 
     im = cv2.resize(im_orig,
-                    (size,size),
-                        interpolation=cv2.INTER_LINEAR)
+                    (size, size),
+                    interpolation=cv2.INTER_LINEAR)
     im_scale_factors.append(im_scale_w)
     im_scale_factors.append(im_scale_h)
     processed_ims.append(im)
@@ -174,14 +171,12 @@ if __name__ == '__main__':
         cfg_from_file(args.cfg_file)
 
     set_cfgs = [
-            'ANCHOR_SCALES', '[2, 4 , 8, 16, 32]', 'ANCHOR_RATIOS', '[1.0/2 , 3.0/4 , 1 , 4.0/3 , 2 ]',
-            'MAX_NUM_GT_BOXES', '20'
-        ]
+        'ANCHOR_SCALES', '[2, 4 , 8, 16, 32]', 'ANCHOR_RATIOS', '[1.0/2 , 3.0/4 , 1 , 4.0/3 , 2 ]',
+        'MAX_NUM_GT_BOXES', '20'
+    ]
     cfg_from_list(set_cfgs)
 
     cfg.USE_GPU_NMS = args.cuda
-
-
 
     print('Using config:')
     pprint.pprint(cfg)
@@ -197,10 +192,9 @@ if __name__ == '__main__':
             input_dir)
 
     load_name = os.path.join(
-            input_dir,
-            'thundernet_epoch_{}.pth'.format(args.checkepoch,
+        input_dir,
+        'thundernet_epoch_{}.pth'.format(args.checkepoch,
                                          ))
-
 
     device = torch.device("cuda" if args.cuda > 0 else "cpu")
 
@@ -212,8 +206,7 @@ if __name__ == '__main__':
     ])
 
     layer = int(args.net.split("_")[1])
-    _RCNN = snet(pascal_classes,layer, pretrained_path= None  , class_agnostic=args.class_agnostic)
-
+    _RCNN = snet(pascal_classes, layer, pretrained_path=None, class_agnostic=args.class_agnostic)
 
     _RCNN.create_architecture()
 
@@ -298,9 +291,8 @@ if __name__ == '__main__':
             im_in = im_in[:, :, np.newaxis]
             im_in = np.concatenate((im_in, im_in, im_in), axis=2)
 
-        im =  im_in
+        im = im_in
         blobs, im_scales = _get_image_blob(im)
-
 
         im_blob = blobs
         im_info_np = np.array(
@@ -336,19 +328,19 @@ if __name__ == '__main__':
                 if args.class_agnostic:
                     if args.cuda > 0:
                         box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                   + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                                     + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
                     else:
                         box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                                   + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+                                     + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
 
                     box_deltas = box_deltas.view(1, -1, 4)
                 else:
                     if args.cuda > 0:
                         box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                   + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                                     + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
                     else:
                         box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                                   + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+                                     + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
                     box_deltas = box_deltas.view(1, -1,
                                                  4 * len(pascal_classes))
 
@@ -386,15 +378,17 @@ if __name__ == '__main__':
                 keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
                 cls_dets = cls_dets[keep.view(-1).long()]
                 if vis:
-                    vis_detections(im2show, pascal_classes[j],color_list[j].tolist(),
-                                             cls_dets.cpu().numpy(), 0.5)
+                    vis_detections(im2show, pascal_classes[j], color_list[j].tolist(),
+                                   cls_dets.cpu().numpy(), 0.5)
 
         misc_toc = time.time()
         nms_time = misc_toc - misc_tic
 
         if webcam_num == -1:
-            sys.stdout.write('im_detect: {:03d}/{:03d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s\r' \
-                             .format(num_images + 1, len(imglist), detect_time, time_measure[0], time_measure[1], time_measure[2], time_measure[3], nms_time))
+            sys.stdout.write(
+                'im_detect: {:03d}/{:03d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s\r' \
+                .format(num_images + 1, len(imglist), detect_time, time_measure[0], time_measure[1], time_measure[2],
+                        time_measure[3], nms_time))
             sys.stdout.flush()
 
         if vis and webcam_num == -1:
@@ -402,7 +396,7 @@ if __name__ == '__main__':
             # cv2.waitKey(0)
             result_path = os.path.join(args.image_dir,
                                        imglist[num_images][:-4] + ".jpg")
-            result_path = result_path.replace("input","output")
+            result_path = result_path.replace("input", "output")
             cv2.imwrite(result_path, im2show)
         else:
             im2showRGB = cv2.cvtColor(im2show, cv2.COLOR_BGR2RGB)

@@ -26,12 +26,13 @@ from torchvision.ops import nms
 from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.faster_rcnn.Snet import snet
-from PIL import  Image
+from PIL import Image
 # import pdb
-from utils import  color_list
+from utils import color_list
 from roi_data_layer.utils import BaseTransform
 from roi_data_layer.roibatchLoader import Detection
 from external.nms import soft_nms
+
 try:
     xrange  # Python 2
 except NameError:
@@ -132,7 +133,8 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def eval_result(args,logger,epoch,output_dir):
+
+def eval_result(args, logger, epoch, output_dir):
     if torch.cuda.is_available() and not args.cuda:
         print(
             "WARNING: You have a CUDA device, so you should probably run with --cuda"
@@ -144,16 +146,13 @@ def eval_result(args,logger,epoch,output_dir):
 
     imdb.competition_mode(on=True)
 
-
     load_name = os.path.join(
-            output_dir,
-            'thundernet_epoch_{}.pth'.format( epoch,
-                                                  ))
-
+        output_dir,
+        'thundernet_epoch_{}.pth'.format(epoch,
+                                         ))
 
     layer = int(args.net.split("_")[1])
     _RCNN = snet(imdb.classes, layer, pretrained_path=None, class_agnostic=args.class_agnostic)
-
 
     _RCNN.create_architecture()
 
@@ -165,8 +164,6 @@ def eval_result(args,logger,epoch,output_dir):
                                 map_location=lambda storage, loc: storage
                                 )  # Load all tensors onto the CPU
     _RCNN.load_state_dict(checkpoint['model'])
-
-
 
     im_data = torch.FloatTensor(1)
     im_info = torch.FloatTensor(1)
@@ -201,8 +198,6 @@ def eval_result(args,logger,epoch,output_dir):
         # offset = Variable(offset)
         # ind = Variable(ind)
 
-
-
     if args.cuda:
         cfg.CUDA = True
 
@@ -230,7 +225,7 @@ def eval_result(args,logger,epoch,output_dir):
     # dataset = roibatchLoader(roidb, imdb.num_classes, training=False)
     dataset = Detection(roidb, num_classes=imdb.num_classes,
                         transform=BaseTransform(cfg.TEST.SIZE,
-                                                      cfg.PIXEL_MEANS),training=False)
+                                                cfg.PIXEL_MEANS), training=False)
 
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=args.batch_size,
@@ -244,7 +239,6 @@ def eval_result(args,logger,epoch,output_dir):
     det_file = os.path.join(output_dir, 'detections.pkl')
 
     _RCNN.eval()
-
 
     empty_array = np.transpose(np.array([[], [], [], [], []]), (1, 0))
 
@@ -297,11 +291,8 @@ def eval_result(args,logger,epoch,output_dir):
             pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
         # pred_boxes /= data[1][0][2].item()
-        pred_boxes[:,:,0::2] /= data[1][0][2].item()
-        pred_boxes[:,:,1::2] /= data[1][0][3].item()
-
-
-
+        pred_boxes[:, :, 0::2] /= data[1][0][2].item()
+        pred_boxes[:, :, 1::2] /= data[1][0][3].item()
 
         scores = scores.squeeze()
         pred_boxes = pred_boxes.squeeze()
@@ -328,16 +319,13 @@ def eval_result(args,logger,epoch,output_dir):
                 keep = nms(cls_boxes[order, :], cls_scores[order],
                            cfg.TEST.NMS)
 
-
                 # keep = soft_nms(cls_dets.cpu().numpy(), Nt=0.5, method=2)
                 # keep = torch.as_tensor(keep, dtype=torch.long)
 
-
-
                 cls_dets = cls_dets[keep.view(-1).long()]
                 if vis:
-                    vis_detections(im2show, imdb.classes[j], color_list[j-1].tolist()  ,
-                                             cls_dets.cpu().numpy(), 0.6)
+                    vis_detections(im2show, imdb.classes[j], color_list[j - 1].tolist(),
+                                   cls_dets.cpu().numpy(), 0.6)
                 all_boxes[j][i] = cls_dets.cpu().numpy()
             else:
                 all_boxes[j][i] = empty_array
@@ -357,14 +345,14 @@ def eval_result(args,logger,epoch,output_dir):
 
         sys.stdout.write(
             'im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s\r' \
-            .format(i + 1, num_images, detect_time, time_measure[0], time_measure[1], time_measure[2],
-                    time_measure[3], nms_time))
+                .format(i + 1, num_images, detect_time, time_measure[0], time_measure[1], time_measure[2],
+                        time_measure[3], nms_time))
         sys.stdout.flush()
 
-        if vis and i%200 == 0 and args.use_tfboard:
-            im2show = im2show[:,:,::-1]
-            logger.add_image('pred_image_{}'.format(i), trans.ToTensor()(Image.fromarray(im2show.astype('uint8'))), global_step= i)
-
+        if vis and i % 200 == 0 and args.use_tfboard:
+            im2show = im2show[:, :, ::-1]
+            logger.add_image('pred_image_{}'.format(i), trans.ToTensor()(Image.fromarray(im2show.astype('uint8'))),
+                             global_step=i)
 
             # cv2.imwrite('result.png', im2show)
             # pdb.set_trace()
@@ -376,12 +364,8 @@ def eval_result(args,logger,epoch,output_dir):
 
     print('Evaluating detections')
     ap_50 = imdb.evaluate_detections(all_boxes, output_dir)
-    logger.add_scalar("map_50" ,
-                     ap_50, global_step = epoch)
+    logger.add_scalar("map_50",
+                      ap_50, global_step=epoch)
 
     end = time.time()
     print("test time: %0.4fs" % (end - start))
-
-
-
-
